@@ -31,14 +31,14 @@ case "$cmd" in
       echo "Адресна книга порожня"
       exit 0
     fi
-    awk -F'\t' '{print $1 " " $2}' "$DB"
+    awk -F'\t' '{print $1 " " $2}' "$DB" | sed 's/\r$//'
     ;;
   remove)
     [[ $# -eq 2 ]] || usage
     ensure_db
     name=$2
     tmp=$(mktemp)
-    awk -v n="$name" -F'\t' '($1 != n)' "$DB" > "$tmp"
+    awk -v n="$name" -F'\t' '{ sub(/\r$/,"",$1); if ($1 != n) print $0 }' "$DB" > "$tmp"
     mv -- "$tmp" "$DB"
     ;;
   clear)
@@ -49,7 +49,7 @@ case "$cmd" in
     [[ $# -eq 2 ]] || usage
     ensure_db
     name=$2
-    awk -v n="$name" -F'\t' '$1==n {print $2}' "$DB"
+    awk -v n="$name" -F'\t' '$1==n {print $2}' "$DB" | sed 's/\r$//'
     ;;
   *)
     usage
