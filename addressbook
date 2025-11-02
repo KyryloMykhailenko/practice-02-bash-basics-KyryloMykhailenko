@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
-# addressbook — simple address book CLI
 set -euo pipefail
-
-script_dir=$(dirname "$(readlink -f "$0")")
-DB="${ADDRESSBOOK_DB:-$script_dir/addressbook.db}"
+DB="${ADDRESSBOOK_DB:-addressbook.db}"
 
 ensure_db() { [[ -f "$DB" ]] || : > "$DB"; }
 
@@ -26,7 +23,6 @@ case "$cmd" in
     ensure_db
     name=$2
     email=$3
-    # Зберігаємо як: <name>\t<email>
     printf '%s\t%s\n' "$name" "$email" >> "$DB"
     ;;
   list)
@@ -35,15 +31,14 @@ case "$cmd" in
       echo "Адресна книга порожня"
       exit 0
     fi
-    cat -- "$DB"
+    awk -F'\t' '{print $1 " " $2}' "$DB"
     ;;
   remove)
     [[ $# -eq 2 ]] || usage
     ensure_db
     name=$2
     tmp=$(mktemp)
-    # Видаляємо всі рядки, де перше поле (до таба) == name
-    awk -v n="$name" -F'\t' '!( $1 == n )' "$DB" > "$tmp"
+    awk -v n="$name" -F'\t' '($1 != n)' "$DB" > "$tmp"
     mv -- "$tmp" "$DB"
     ;;
   clear)
@@ -54,7 +49,6 @@ case "$cmd" in
     [[ $# -eq 2 ]] || usage
     ensure_db
     name=$2
-    # Виводимо лише email'и для exact-match по імені
     awk -v n="$name" -F'\t' '$1==n {print $2}' "$DB"
     ;;
   *)
