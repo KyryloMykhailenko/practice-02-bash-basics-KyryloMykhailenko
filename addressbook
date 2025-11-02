@@ -16,13 +16,15 @@ EOF
   exit 1
 }
 
+clean_cr() { printf '%s' "$1" | sed 's/\r//g'; }
+
 cmd=${1:-}
 case "$cmd" in
   new)
     [[ $# -eq 3 ]] || usage
     ensure_db
-    name=$2
-    email=$3
+    name=$(clean_cr "$2")
+    email=$(clean_cr "$3")
     printf '%s\t%s\n' "$name" "$email" >> "$DB"
     ;;
   list)
@@ -31,14 +33,14 @@ case "$cmd" in
       echo "Адресна книга порожня"
       exit 0
     fi
-    awk -F'\t' '{print $1 " " $2}' "$DB" | sed 's/\r$//'
+    awk -F'\t' '{gsub(/\r/,"",$1); gsub(/\r/,"",$2); print $1 " " $2}' "$DB"
     ;;
   remove)
     [[ $# -eq 2 ]] || usage
     ensure_db
-    name=$2
+    name=$(clean_cr "$2")
     tmp=$(mktemp)
-    awk -v n="$name" -F'\t' '{ sub(/\r$/,"",$1); if ($1 != n) print $0 }' "$DB" > "$tmp"
+    awk -v n="$name" -F'\t' '{gsub(/\r/,"",$1); if ($1 != n) print $0}' "$DB" > "$tmp"
     mv -- "$tmp" "$DB"
     ;;
   clear)
@@ -48,8 +50,8 @@ case "$cmd" in
   lookup)
     [[ $# -eq 2 ]] || usage
     ensure_db
-    name=$2
-    awk -v n="$name" -F'\t' '$1==n {print $2}' "$DB" | sed 's/\r$//'
+    name=$(clean_cr "$2")
+    awk -v n="$name" -F'\t' '$1==n {gsub(/\r/,"",$2); print $2}' "$DB"
     ;;
   *)
     usage
