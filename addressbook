@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# addressbook — simple address book CLI
+set -euo pipefail
+
+script_dir=$(dirname "$(readlink -f "$0")")
+DB="${ADDRESSBOOK_DB:-$script_dir/addressbook.db}"
+
+ensure_db() { [[ -f "$DB" ]] || : > "$DB"; }
+
+usage() {
+  cat >&2 <<'EOF'
+Використання:
+  ./addressbook new <name> <email>
+  ./addressbook list
+  ./addressbook remove <name>
+  ./addressbook clear
+  ./addressbook lookup <name>
+EOF
+  exit 1
+}
+
+cmd=${1:-}
+case "$cmd" in
+  new)
+    [[ $# -eq 3 ]] || usage
+    ensure_db
+    name=$2
+    email=$3
+    # Зберігаємо як: <name>\t<email>
+    printf '%s\t%s\n' "$name" "$email" >> "$DB"
+    ;;
+  list)
+    ensure_db
+    if [[ ! -s "$DB" ]]; then
+      echo "Адресна книга порожня"
+      exit 0
+    fi
+    cat -- "$DB"
+    ;;
+  remove)
+    [[ $# -eq 2 ]] || usage
+    ensure_db
+    name=$2
+    tmp=$(mktemp)
+    # Видаляємо всі рядки, де перше поле (до таба) == name
+    awk -v n="$name" -F'\t' '!( $1 == n )' "$DB" > "$tmp"
+    mv -- "$tmp" "$DB"
+    ;;
+  clear)
+    ensure_db
+    : > "$DB"
+    ;;
+  lookup)
+    [[ $# -eq 2 ]] || usage
+    ensure_db
+    name=$2
+    # Виводимо лише email'и для exact-match по імені
+    awk -v n="$name" -F'\t' '$1==n {print $2}' "$DB"
+    ;;
+  *)
+    usage
+    ;;
+esac

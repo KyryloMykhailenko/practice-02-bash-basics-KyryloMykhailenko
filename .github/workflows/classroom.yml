@@ -1,0 +1,70 @@
+name: Autograding Tests
+'on':
+- push
+- repository_dispatch
+permissions:
+  checks: write
+  actions: read
+  contents: read
+jobs:
+  run-autograding-tests:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-classroom[bot]'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Test for Task 1
+      id: test-for-task-1
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Test for Task 1
+        setup-command: chmod +x tests/*.sh
+        command: "./tests/task1_test.sh"
+        timeout: 10
+        max-score: 3
+    - name: Test for Task 2
+      id: test-for-task-2
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Test for Task 2
+        setup-command: chmod +x tests/*.sh
+        command: "./tests/task2_test.sh"
+        timeout: 10
+        max-score: 3
+    - name: Test for Task 3
+      id: test-for-task-3
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Test for Task 3
+        setup-command: chmod +x tests/*.sh
+        command: "./tests/task3_test.sh"
+        timeout: 10
+        max-score: 3
+    - name: Test for Task 4
+      id: test-for-task-4
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Test for Task 4
+        setup-command: chmod +x tests/*.sh
+        command: "./tests/task4_test.sh"
+        timeout: 10
+        max-score: 5
+    - name: Test for Task 5
+      id: test-for-task-5
+      uses: classroom-resources/autograding-command-grader@v1
+      with:
+        test-name: Test for Task 5
+        setup-command: chmod +x tests/*.sh
+        command: "./tests/task5_test.sh"
+        timeout: 10
+        max-score: 6
+    - name: Autograding Reporter
+      uses: classroom-resources/autograding-grading-reporter@v1
+      env:
+        TEST-FOR-TASK-1_RESULTS: "${{steps.test-for-task-1.outputs.result}}"
+        TEST-FOR-TASK-2_RESULTS: "${{steps.test-for-task-2.outputs.result}}"
+        TEST-FOR-TASK-3_RESULTS: "${{steps.test-for-task-3.outputs.result}}"
+        TEST-FOR-TASK-4_RESULTS: "${{steps.test-for-task-4.outputs.result}}"
+        TEST-FOR-TASK-5_RESULTS: "${{steps.test-for-task-5.outputs.result}}"
+      with:
+        runners: test-for-task-1,test-for-task-2,test-for-task-3,test-for-task-4,test-for-task-5
