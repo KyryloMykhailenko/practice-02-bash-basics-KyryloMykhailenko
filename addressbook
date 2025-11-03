@@ -27,7 +27,7 @@ case "$cmd" in
     ensure_db
     name=$(strip_cr "$2")
     email=$(strip_cr "$3")
-    printf '%s\t%s\n' "$name" "$email" >>"$DB"
+    printf '%s %s\n' "$name" "$email" >>"$DB"
     ;;
 
   list)
@@ -36,12 +36,7 @@ case "$cmd" in
       echo "Адресна книга порожня"
       exit 0
     fi
-    while IFS=$'\t' read -r name email || [[ -n "${name-}" ]]; do
-      name=$(strip_cr "${name-}")
-      email=$(strip_cr "${email-}")
-      [[ -z "$name$email" ]] && continue
-      printf '%s %s\n' "$name" "$email"
-    done <"$DB"
+    sed 's/\r$//' "$DB"
     ;;
 
   remove)
@@ -49,12 +44,13 @@ case "$cmd" in
     ensure_db
     target=$(strip_cr "$2")
     tmp=$(mktemp)
-    while IFS= read -r line || [[ -n "$line" ]]; do
-      line_no_cr=${line//$'\r'/}
-      IFS=$'\t' read -r name email <<<"$line_no_cr"
-      [[ "$name" == "$target" ]] && continue
-      printf '%s\n' "$line_no_cr" >>"$tmp"
-    done <"$DB"
+    awk -v n="$target" '{
+      sub(/\r$/,"")
+      if (match($0, /^(.*) ([^ ]+)$/, m)) {
+        name=m[1]
+        if (name != n) print $0
+      }
+    }' "$DB" >"$tmp"
     mv -- "$tmp" "$DB"
     ;;
 
@@ -67,11 +63,13 @@ case "$cmd" in
     [[ $# -eq 2 ]] || usage
     ensure_db
     target=$(strip_cr "$2")
-    while IFS=$'\t' read -r name email || [[ -n "${name-}" ]]; do
-      name=$(strip_cr "${name-}")
-      email=$(strip_cr "${email-}")
-      [[ "$name" == "$target" ]] && printf '%s\n' "$email"
-    done <"$DB"
+    awk -v n="$target" '{
+      sub(/\r$/,"")
+      if (match($0, /^(.*) ([^ ]+)$/, m)) {
+        name=m[1]; email=m[2]
+        if (name==n) print email
+      }
+    }' "$DB"
     ;;
 
   *)
