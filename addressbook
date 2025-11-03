@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DB="${ADDRESSBOOK_DB:-addressbook.db}"
+
+ensure_db(){ [[ -f "$DB" ]] || : >"$DB"; }
+
+usage(){
+  cat >&2 <<'EOF'
+Використання:
+  ./addressbook new <name> <email>
+  ./addressbook list
+  ./addressbook remove <name>
+  ./addressbook clear
+  ./addressbook lookup <name>
+EOF
+  exit 1
+}
+
+strip_cr(){ printf '%s' "${1//$'\r'/}"; }
+
+cmd=${1:-}
+
+case "$cmd" in
+  new)
+    [[ $# -eq 3 ]] || usage
+    ensure_db
+    name=$(strip_cr "$2")
+    email=$(strip_cr "$3")
+    printf '%s %s\n' "$name" "$email" >>"$DB"
+    ;;
+
+  list)
+    ensure_db
+    if [[ ! -s "$DB" ]]; then
+      echo "Адресна книга порожня"
+      exit 0
+    fi
+    sed 's/\r$//' "$DB"
+    ;;
+
+  remove)
+    [[ $# -eq 2 ]] || usage
+    ensure_db
+    target=$(strip_cr "$2")
+    tmp=$(mktemp)
+    awk -v n="$target" '{
+      sub(/\r$/,"")
+      if (match($0, /^(.*) ([^ ]+)$/, m)) {
+        name=m[1]
+        if (name != n) print $0
+      }
+    }' "$DB" >"$tmp"
+    mv -- "$tmp" "$DB"
+    ;;
+
+  clear)
+    ensure_db
+    : >"$DB"
+    ;;
+
+  lookup)
+    [[ $# -eq 2 ]] || usage
+    ensure_db
+    target=$(strip_cr "$2")
+    awk -v n="$target" '{
+      sub(/\r$/,"")
+      if (match($0, /^(.*) ([^ ]+)$/, m)) {
+        name=m[1]; email=m[2]
+        if (name==n) print email
+      }
+    }' "$DB"
+    ;;
+
+  *)
+    usage
+    ;;
+esac
